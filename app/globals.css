@@ -134,3 +134,16 @@ h2 { display: flex; align-items: center; gap: .5rem; font-size: .9375rem; font-w
 .maintenance-context,.maintenance-form { background: var(--card); border: 1px solid var(--border); padding: 1.25rem; border-radius: .6rem; margin-bottom: 1rem; }.maintenance-context-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }.maintenance-context p { font-size: .875rem; margin: .75rem 0; }.maintenance-context summary { cursor: pointer; padding: .5rem 0; color: var(--primary); font-size: .875rem; }.maintenance-json { font-size: .875rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow-y: auto; background: var(--background); padding: .9rem; border: 1px solid var(--border); border-radius: .4rem; }
 .maintenance-form { display: flex; flex-direction: column; gap: 1rem; }.maintenance-payload { min-height: 18rem; font-size: 1rem !important; font-family: ui-monospace, monospace; line-height: 1.5; resize: vertical; field-sizing: fixed; }.maintenance-submit { display: flex; justify-content: end; }.maintenance-submit button,.maintenance-context-heading button { min-height: 2.75rem; font-size: .875rem; white-space: normal; }.maintenance-success { color: var(--primary); font-size: 1rem; margin: 0; }
 @media(max-width:560px) { .calendar-maintenance { padding: 1rem; }.maintenance-context-heading { align-items: start; flex-direction: column; gap: .75rem; }.maintenance-context,.maintenance-form { padding: 1rem; }.maintenance-submit button { width: 100%; } }
+
+/* The overview stays compact; full column pages reuse the same task controls. */
+.lane-order-note { margin: -.2rem .85rem .65rem; color: var(--muted-foreground); font-size: .8125rem; }
+.lane-preview-footer { padding: .1rem .6rem .8rem; display: flex; flex-direction: column; align-items: stretch; gap: .5rem; color: var(--muted-foreground); font-size: .8125rem; text-align: center; }
+.view-all { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.75rem; padding: .5rem .6rem; border: 1px solid var(--primary); border-radius: .45rem; background: var(--card); color: var(--primary); text-decoration: none; font-size: .875rem; font-weight: 600; }
+.view-all:hover { background: var(--secondary); }
+.column-workspace { max-width: 900px; }
+.back-to-board { display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; margin-bottom: 1rem; color: var(--primary); text-decoration: none; font-size: .9375rem; font-weight: 600; }
+.back-to-board:hover { text-decoration: underline; text-underline-offset: .2rem; }
+.column-page .full-lane { display: block; min-height: 0; }
+.column-page .card-description { -webkit-line-clamp: 3; }
+.column-page .card-move { width: auto; min-width: 8rem; }
+@media(max-width:560px) { .column-workspace .board-toolbar { flex-wrap: wrap; } }

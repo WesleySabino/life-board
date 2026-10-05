@@ -12,7 +12,7 @@ npm run lint
 npm run build
 ```
 
-`npm test` covers input validation for tasks, snapshot windows and event links. It does not replace integration tests of a deployed host's authentication or D1 behavior. `npm run build` emits a Cloudflare-compatible Worker and assets in `dist/`. The project includes portable development helpers; managed Sites environments can select their own ignored checkout-local execution profile.
+`npm test` covers input validation for tasks, snapshot windows and event links, plus column-preview counts, ordering, filtering, mutation isolation and navigation URLs. It does not replace integration tests of a deployed host's authentication or D1 behavior. `npm run build` emits a Cloudflare-compatible Worker and assets in `dist/`. The project includes portable development helpers; managed Sites environments can select their own ignored checkout-local execution profile.
 
 ## Local D1
 

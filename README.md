@@ -33,6 +33,8 @@ For personal tasks and appointments, completion should come from what you report
 ## What is included
 
 - One board with the five columns above, card notes, up to eight labels, and date-only due dates
+- Compact five-card previews, total counts and View all links for every column
+- Dedicated full-column pages with Back to board, editing, move and archive controls
 - Drag-and-drop moves plus keyboard/touch-friendly controls
 - Recoverable archive and restore
 - Durable Cloudflare D1 storage, with user-scoped queries
@@ -43,6 +45,8 @@ For personal tasks and appointments, completion should come from what you report
 - A saved calendar view and per-task links to verified Google Calendar entries
 
 There is no embedded ChatGPT conversation panel in this version. Use your Codex/ChatGPT conversation alongside the board. Life Board does not contain an AI model, run autonomous background jobs, or give an assistant new permissions.
+
+Done is ordered by most recent update, clearly labeled **Recently updated**. An update can be an edit or a move; it is not a completion timestamp. The other columns keep their existing board order. Archive state and the selected mobile column are carried through navigation. See the [compact-column validation notes](docs/compact-column-validation.md) for verification scope.
 
 ## Calendar behavior
 

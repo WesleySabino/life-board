@@ -1,6 +1,7 @@
 "use client";
+/* eslint @next/next/no-html-link-for-pages: "off" -- Column pages intentionally use full browser navigation to restore query-selected views on Back/Forward. */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Archive, CalendarDays, Check, GripVertical, LayoutPanelLeft, Plus, RefreshCw, RotateCcw } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, CalendarDays, Check, GripVertical, LayoutPanelLeft, Plus, RefreshCw, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +14,8 @@ import { Toaster } from "@/components/ui/sonner";
 import CalendarPanel from "./calendar-panel";
 import { type CalendarContext } from "@/lib/calendar-model";
 import { createTaskSchema, updateTaskSchema, statuses, statusNames, type Status, type Task } from "@/lib/task-model";
+
+import { boardHref, columnHref, columnTasks, COLUMN_PREVIEW_LIMIT } from "@/lib/board-view";
 
 type Draft = { id: string; title: string; description: string; status: Status; labels: string; dueDate: string };
 const emptyDraft = (status: Status = "inbox"): Draft => ({ id: crypto.randomUUID(), title: "", description: "", status, labels: "", dueDate: "" });
@@ -29,17 +32,17 @@ async function request<T extends { message?: string } = { message?: string; task
   return data;
 }
 
-export default function Board() {
+export default function Board({ column, initialArchived = false, initialSelected = "inbox" }: { column?: Status; initialArchived?: boolean; initialSelected?: Status }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [calendar, setCalendar] = useState<CalendarContext>({ snapshot: null, links: [] });
   const [calendarLoading, setCalendarLoading] = useState(true);
   const [calendarError, setCalendarError] = useState("");
   const calendarSequence = useRef(0);
-  const [archived, setArchived] = useState(false);
+  const [archived, setArchived] = useState(initialArchived);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [checked, setChecked] = useState("");
-  const [selected, setSelected] = useState<Status>("inbox");
+  const [selected, setSelected] = useState<Status>(initialSelected);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -48,8 +51,8 @@ export default function Board() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dropOn, setDropOn] = useState<Status | null>(null);
   const loadSequence = useRef(0);
-  const taskRef = useRef(tasks); taskRef.current = tasks;
-  const archivedRef = useRef(archived); archivedRef.current = archived;
+  const archivedRef = useRef(archived);
+  useEffect(() => { archivedRef.current = archived; }, [archived]);
   const reloadRef = useRef<() => Promise<void>>(async () => {});
 
   const loadCalendar = useCallback(async () => {
@@ -67,9 +70,10 @@ export default function Board() {
     } catch (e) { if (sequence === loadSequence.current) setError((e as Error).message); }
     finally { if (sequence === loadSequence.current) setLoading(false); }
   }, [archived]);
-  reloadRef.current = load;
+  useEffect(() => { reloadRef.current = load; }, [load]);
   useEffect(() => {
-    setLoading(true); setTasks([]); void load(); void loadCalendar();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Both loaders await network responses before updating state.
+    void load(); void loadCalendar();
     const interval = setInterval(() => { if (document.visibilityState === "visible") { void load(); void loadCalendar(); } }, 30000);
     const refresh = () => { if (document.visibilityState === "visible") { void load(); void loadCalendar(); } };
     window.addEventListener("focus", refresh); window.addEventListener("online", refresh); document.addEventListener("visibilitychange", refresh);
@@ -103,7 +107,7 @@ export default function Board() {
   async function move(t: Task, status: Status) {
     if (t.status === status || busyId) return;
     setBusyId(t.id);
-    try { await mutate({ id: t.id, revision: t.revision, status }, true); setSelected(status); toast.success(`Moved to ${statusNames[status]}`); }
+    try { await mutate({ id: t.id, revision: t.revision, status }, true); changeSelection(status); toast.success(`Moved to ${statusNames[status]}`); }
     catch (e) { toast.error((e as Error).message); void load(); }
     finally { setBusyId(null); }
   }
@@ -129,11 +133,26 @@ export default function Board() {
     return () => lifecycle.abort();
   }, [mutate]);
 
-  const overdue = tasks.filter((t) => t.dueDate && t.dueDate < today() && t.status !== "done").length;
+  function changeSelection(value: Status) {
+    setSelected(value);
+    if (!column) window.history.replaceState(window.history.state, "", boardHref(value, archived));
+  }
+  function changeArchive(value: boolean) {
+    archivedRef.current = value;
+    setLoading(true); setTasks([]); setArchived(value);
+    window.history.replaceState(window.history.state, "", column ? columnHref(column, value) : boardHref(selected, value));
+  }
+  const returnTo = column ? columnHref(column, archived) : boardHref(selected, archived);
+  const visibleTotal = column ? columnTasks(tasks, column).length : tasks.length;
+
+  const overdue = (column ? columnTasks(tasks, column) : tasks).filter((t) => t.dueDate && t.dueDate < today() && t.status !== "done").length;
   function lane(status: Status) {
-    const cards = tasks.filter((t) => t.status === status);
-    return <section key={status} className={`lane lane-${status} ${selected === status ? "selected" : ""} ${dropOn === status ? "drop-on" : ""}`} id={`lane-${status}`} aria-labelledby={`heading-${status}`} onDragOver={(e) => { if (!archived && !busyId) { e.preventDefault(); setDropOn(status); } }} onDragLeave={() => setDropOn(null)} onDrop={(e) => { e.preventDefault(); setDropOn(null); const t = tasks.find((v) => v.id === e.dataTransfer.getData("text/plain")); if (t) void move(t, status); }}>
-      <div className="lane-heading"><h2 id={`heading-${status}`}>{statusNames[status]} <span className="count">{cards.length}</span></h2>{!archived && <Button variant="ghost" size="icon" className="lane-add" aria-label={`Add task to ${statusNames[status]}`} onClick={() => add(status)}><Plus /></Button>}</div>
+    const allCards = columnTasks(tasks, status);
+    const cards = column ? allCards : allCards.slice(0, COLUMN_PREVIEW_LIMIT);
+    // eslint-disable-next-line react-hooks/refs -- move runs only in drop/change events; its request handler does not read refs during render.
+    return <section key={status} className={`lane ${column ? "full-lane" : ""} lane-${status} ${selected === status ? "selected" : ""} ${dropOn === status ? "drop-on" : ""}`} id={`lane-${status}`} aria-labelledby={`heading-${status}`} onDragOver={(e) => { if (!archived && !busyId) { e.preventDefault(); setDropOn(status); } }} onDragLeave={() => setDropOn(null)} onDrop={(e) => { e.preventDefault(); setDropOn(null); const t = tasks.find((v) => v.id === e.dataTransfer.getData("text/plain")); if (t) void move(t, status); }}>
+      <div className="lane-heading"><h2 id={`heading-${status}`}>{statusNames[status]} <span className="count">{allCards.length}</span></h2>{!archived && <Button variant="ghost" size="icon" className="lane-add" aria-label={`Add task to ${statusNames[status]}`} onClick={() => add(status)}><Plus /></Button>}</div>
+      {status === "done" && <p className="lane-order-note">Recently updated</p>}
       <div className="lane-content">
         {loading ? <><Skeleton className="card-skeleton" /><Skeleton className="card-skeleton short" /></> : cards.map((t) => <article key={t.id} className={`task-card ${busyId === t.id ? "card-busy" : ""}`} draggable={!archived && !busyId} onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDropOn(null)}>
           <button className="card-body" onClick={() => edit(t)} aria-label={`Edit ${t.title}`}><span className="card-title">{t.title}</span>{t.description && <span className="card-description">{t.description}</span>}{t.labels.length > 0 && <span className="labels">{t.labels.map((label) => <span className="label-tag" key={label}>{label}</span>)}</span>}{t.dueDate && <span className={`due-date ${t.dueDate < today() && t.status !== "done" ? "overdue" : ""}`}><CalendarDays aria-hidden="true" size={15} />{readableDate(t.dueDate)}{t.dueDate < today() && t.status !== "done" ? " · Overdue" : t.dueDate === today() ? " · Today" : ""}</span>}</button>
@@ -142,16 +161,17 @@ export default function Board() {
         </article>)}
         {!loading && !cards.length && <Empty className="lane-empty"><EmptyHeader><EmptyDescription>{error ? "Couldn't load tasks" : archived ? "No archived tasks" : status === "inbox" ? "Capture something on your mind" : status === "done" ? "Finished tasks land here" : "Nothing here yet"}</EmptyDescription></EmptyHeader>{!archived && status === "inbox" && !error && <Button variant="outline" onClick={() => add()}>Add your first task</Button>}</Empty>}
       </div>
+      {!column && !loading && <div className="lane-preview-footer"><span>Showing {cards.length} of {allCards.length}</span><a className="view-all" href={columnHref(status, archived)} aria-label={`View all ${allCards.length} ${archived ? "archived " : ""}${statusNames[status]} tasks`}>View all ({allCards.length})<ArrowRight size={16} aria-hidden="true" /></a></div>}
     </section>;
   }
 
   return <>
-    <header className="app-header"><div className="brand"><span className="brand-mark"><LayoutPanelLeft aria-hidden="true" size={23} /></span><h1>Life Board</h1></div><div className="header-right"><span className="private-note">Private to you</span><Button className="new-task" onClick={() => add(selected)}><Plus size={18} />New task</Button></div></header>
-    <main className="workspace"><div className="board-toolbar"><div className="board-meta"><span>{archived ? "Archive" : "Your board"}</span><span className="meta-divider" /> <span className="secondary">{tasks.length} {tasks.length === 1 ? "task" : "tasks"}</span>{overdue > 0 && !archived && <span className="overdue-summary">{overdue} overdue</span>}</div><div className="toolbar-actions"><div className="archive-toggle"><Switch id="archive-view" checked={archived} onCheckedChange={setArchived} /><label htmlFor="archive-view">Archive</label></div><Button variant="ghost" size="icon" aria-label="Refresh board" onClick={() => { void load(); void loadCalendar(); }} disabled={loading}><RefreshCw size={18} /></Button></div></div>
-      {error && <div className="error-banner" role="alert"><span>{error}{tasks.length ? " Showing the last loaded tasks." : ""}</span><Button variant="outline" onClick={() => void load()}>Retry</Button><a href="/signin-with-chatgpt?return_to=%2F" target="_top">Sign in</a></div>}
-      <Tabs value={selected} onValueChange={(v) => setSelected(v as Status)} className="mobile-tabs"><TabsList aria-label="Board columns" className="mobile-tabs-list">{statuses.map((s) => <TabsTrigger key={s} value={s} aria-controls={`lane-${s}`} className="mobile-tab">{statusNames[s]}<span>{tasks.filter((t) => t.status === s).length}</span></TabsTrigger>)}</TabsList></Tabs>
-      <div className="board-grid">{statuses.map(lane)}</div>
-      <CalendarPanel context={calendar} loading={calendarLoading} error={calendarError} /><footer className="board-footer"><span>{archived ? "Archived tasks can be restored anytime" : "Move cards by dragging or using the menu on each card"}</span><span role="status" aria-live="polite">{loading ? "Loading…" : error ? "Sync paused" : checked ? `Checked at ${checked}` : ""}</span></footer>
+    <header className="app-header"><div className="brand"><span className="brand-mark"><LayoutPanelLeft aria-hidden="true" size={23} /></span><h1>Life Board</h1></div><div className="header-right"><span className="private-note">Private to you</span><Button className="new-task" onClick={() => add(column ?? selected)}><Plus size={18} />New task</Button></div></header>
+    <main className={`workspace ${column ? "column-workspace" : ""}`}>{column && <a className="back-to-board" href={boardHref(column, archived)}><ArrowLeft size={18} aria-hidden="true" />Back to board</a>}<div className="board-toolbar"><div className="board-meta"><span>{column ? `${archived ? "Archived · " : ""}${statusNames[column]}` : archived ? "Archive" : "Your board"}</span><span className="meta-divider" /> <span className="secondary">{visibleTotal} {visibleTotal === 1 ? "task" : "tasks"}</span>{overdue > 0 && !archived && <span className="overdue-summary">{overdue} overdue</span>}</div><div className="toolbar-actions"><div className="archive-toggle"><Switch id="archive-view" checked={archived} onCheckedChange={changeArchive} /><label htmlFor="archive-view">Archive</label></div><Button variant="ghost" size="icon" aria-label="Refresh board" onClick={() => { void load(); void loadCalendar(); }} disabled={loading}><RefreshCw size={18} /></Button></div></div>
+      {error && <div className="error-banner" role="alert"><span>{error}{tasks.length ? " Showing the last loaded tasks." : ""}</span><Button variant="outline" onClick={() => void load()}>Retry</Button><a href={`/signin-with-chatgpt?return_to=${encodeURIComponent(returnTo)}`} target="_top">Sign in</a></div>}
+      {!column && <Tabs value={selected} onValueChange={(v) => changeSelection(v as Status)} className="mobile-tabs"><TabsList aria-label="Board columns" className="mobile-tabs-list">{statuses.map((s) => <TabsTrigger key={s} value={s} aria-controls={`lane-${s}`} className="mobile-tab">{statusNames[s]}<span>{tasks.filter((t) => t.status === s).length}</span></TabsTrigger>)}</TabsList></Tabs>}
+      <div className={column ? "column-page" : "board-grid"}>{column ? lane(column) : statuses.map(lane)}</div>
+      {!column && <CalendarPanel context={calendar} loading={calendarLoading} error={calendarError} />}<footer className="board-footer"><span>{archived ? "Archived tasks can be restored anytime" : column ? "Move tasks using the menu on each card" : "Move cards by dragging or using the menu on each card"}</span><span role="status" aria-live="polite">{loading ? "Loading…" : error ? "Sync paused" : checked ? `Checked at ${checked}` : ""}</span></footer>
     </main>
     <Dialog open={open} onOpenChange={(v) => { if (!saving && !busyId) setOpen(v); }}><DialogContent className="task-dialog"><DialogHeader><DialogTitle>{editing ? "Edit task" : "New task"}</DialogTitle><DialogDescription>{editing?.archived ? "This task is in your archive" : "Only a title is required"}</DialogDescription></DialogHeader>{draft && <form onSubmit={save} className="task-form"><div className="field"><label htmlFor="task-title">Title</label><input id="task-title" autoFocus required maxLength={200} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="What do you want to get done?" /></div><div className="field"><label htmlFor="task-description">Notes <span>optional</span></label><textarea id="task-description" maxLength={6000} rows={3} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Details, links, or a small next step" /></div><div className="form-row"><div className="field"><label id="task-status-label">Column</label><Select value={draft.status} onValueChange={(v) => setDraft({ ...draft, status: v as Status })}><SelectTrigger className="form-select" aria-labelledby="task-status-label"><SelectValue /></SelectTrigger><SelectContent>{statuses.map((v) => <SelectItem key={v} value={v}>{statusNames[v]}</SelectItem>)}</SelectContent></Select></div><div className="field"><label htmlFor="task-date">Due date <span>optional</span></label><input id="task-date" aria-describedby="calendar-date-help" type="date" min="0001-01-01" max="9999-12-31" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} /></div></div><div className="field"><label htmlFor="task-labels">Labels <span>optional</span></label><input id="task-labels" value={draft.labels} onChange={(e) => setDraft({ ...draft, labels: e.target.value })} placeholder="Work, Home, Health" aria-describedby="label-help" /><p id="calendar-date-help" className="field-help">Ask your dot to add a task&apos;s due date to Tasks. Calendar changes happen only when requested.</p><p id="label-help" className="field-help">Separate with commas · up to 8 labels</p></div>{saveError && <p role="alert" className="save-error">{saveError}</p>}<div className="form-actions">{editing && <Button type="button" variant="ghost" className="archive-action" disabled={saving || Boolean(busyId)} onClick={() => void archiveTask(editing)}>{editing.archived ? <RotateCcw size={17} /> : <Archive size={17} />}{editing.archived ? "Restore" : "Archive"}</Button>}<div className="save-actions"><Button type="button" variant="outline" disabled={saving || Boolean(busyId)} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={saving || Boolean(busyId)}>{saving ? "Saving…" : editing ? "Save changes" : "Add task"}{!saving && <Check size={16} />}</Button></div></div></form>}</DialogContent></Dialog>
     <Toaster richColors position="bottom-right" />
