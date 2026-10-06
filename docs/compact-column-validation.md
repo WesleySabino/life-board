@@ -24,3 +24,9 @@ Validation date: October 5, 2026.
 - Repository ESLint still reports one inherited `react-hooks/set-state-in-effect` error in the separate calendar maintenance view
 
 Real-browser layout and physical mobile/keyboard interaction were not verified: the available cloud browser rejected the loopback preview URL with `ERR_BLOCKED_BY_CLIENT`. No browser restriction was bypassed. These checks do not claim production authentication, deployment infrastructure or calendar-provider end-to-end testing.
+
+## User verification — October 6, 2026
+
+The user confirmed that the compact columns work on mobile. This is user-reported verification of the mobile behavior, separate from the October 5 automated and isolated checks above. No new browser, keyboard or calendar-provider test is claimed.
+
+The inherited calendar-maintenance lint error was subsequently fixed in the local October 6 changes. See [CI validation](ci-validation.md) for current check outcomes and publication status.

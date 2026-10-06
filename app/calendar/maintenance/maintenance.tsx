@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,8 @@ const help: Record<Operation, string> = {
   mark_stale: "Keep the last successful snapshot and record that its requested refresh failed. Include its current expectedRevision and a short message.",
   save_link: "Record an event already verified in Google Calendar after an explicit task-level request. Use expectedLinkRevision 0 for a new link, or the saved link revision for an update.",
 };
-async function readContext(): Promise<CalendarContext> {
-  const response = await fetch("/api/calendar", { cache: "no-store" });
+async function readContext(signal?: AbortSignal): Promise<CalendarContext> {
+  const response = await fetch("/api/calendar", { cache: "no-store", signal });
   const data = await response.json() as CalendarContext & { message?: string };
   if (!response.ok) throw new Error(data.message ?? "Calendar context is temporarily unavailable.");
   return data;
@@ -26,13 +26,29 @@ export default function CalendarMaintenance() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
-  const refresh = useCallback(async () => {
+  async function refresh() {
     setLoading(true);
     try { setContext(await readContext()); setError(""); }
     catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
+  }
+  useEffect(() => {
+    // The initial render already shows loading. Update state when the request
+    // settles, and cancel it when this view unmounts (including Strict Mode).
+    const controller = new AbortController();
+    void readContext(controller.signal).then(
+      (data) => {
+        if (controller.signal.aborted) return;
+        setContext(data); setError("");
+      },
+      (e: Error) => {
+        if (!controller.signal.aborted) setError(e.message);
+      },
+    ).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
   async function save(event: FormEvent) {
     event.preventDefault(); if (busy) return;
     setBusy(true); setError(""); setResult("");
