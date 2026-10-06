@@ -14,6 +14,8 @@ npm run build
 
 `npm test` covers input validation for tasks, snapshot windows and event links, plus column-preview counts, ordering, filtering, mutation isolation and navigation URLs. It does not replace integration tests of a deployed host's authentication or D1 behavior. `npm run build` emits a Cloudflare-compatible Worker and assets in `dist/`. The project includes portable development helpers; managed Sites environments can select their own ignored checkout-local execution profile.
 
+`.github/workflows/ci.yml` runs independent lint, typecheck, test and build jobs on pushes, pull requests and manual dispatches, using Node.js 24 and the npm lockfile. All four jobs report even when one fails. The workflow has read-only repository access and needs no application secrets. It validates the portable build; it does not deploy or change branch protection. Existing ESLint warnings remain visible without failing the lint job.
+
 ## Local D1
 
 Build first to emit `dist/server/wrangler.json`. Apply each checked-in migration once to the local `DB` binding with the same `.wrangler/state` persistence directory used by development:
