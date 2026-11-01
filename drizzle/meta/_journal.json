@@ -15,6 +15,20 @@
       "when": 1790805237641,
       "tag": "0001_powerful_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793465359933,
+      "tag": "0002_glamorous_kylun",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793465599795,
+      "tag": "0003_perfect_night_thrasher",
+      "breakpoints": true
     }
   ]
 }
