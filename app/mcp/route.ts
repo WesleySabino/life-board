@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { createTask, listTasks, TaskError, updateTask } from "@/lib/tasks";
 import { ZodError, z } from "zod";
+import { createRoutine, listRoutines, changeRoutine, removeRoutine } from "@/lib/routines";
 import { calendarTools } from "@/lib/calendar-mcp";
 import { getCalendarContext, replaceCalendarSnapshot, markCalendarStale, saveCalendarLink } from "@/lib/calendar";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,10 @@ const properties = {
   dueDate: { type: ["string", "null"], description: "Due date YYYY-MM-DD, or null to clear. Does not create a calendar event." },
 };
 const tools = [
+  { name: "list_routines", description: "List the user's daily routine and today's completion state in Paraguay time. Read before changing or removing an item.", inputSchema: { type: "object", properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: "create_routine", description: "Add a user-requested daily routine task. Supply a new UUID; reuse it for retries.", inputSchema: { type: "object", properties: { id: { type: "string", format: "uuid" }, title: { type: "string", minLength: 1, maxLength: 200 } }, required: ["id", "title"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
+  { name: "set_routine_completion", description: "Mark or unmark today's routine task only when the user reports completion or requests a correction. First list routines, then use the returned date and item revision; stale changes are rejected.", inputSchema: { type: "object", properties: { id: { type: "string", format: "uuid" }, revision: { type: "integer", minimum: 1 }, date: { type: "string", description: "Date returned by list_routines (YYYY-MM-DD)." }, completed: { type: "boolean" } }, required: ["id", "revision", "date", "completed"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
+  { name: "remove_routine", description: "Remove a user-requested routine task permanently. First list routines and use its current revision; stale changes are rejected.", inputSchema: { type: "object", properties: { id: { type: "string", format: "uuid" }, revision: { type: "integer", minimum: 1 } }, required: ["id", "revision"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false } },
   { name: "list_tasks", description: "Read the signed-in user's Life Board tasks. Archived tasks are recoverable and separate from the active board.", inputSchema: { type: "object", properties: { archived: { type: "boolean", default: false } }, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: "create_task", description: "Create one task on the signed-in user's Life Board. Use a new UUID as id; retrying the same id does not create duplicates. Use for user-requested tasks or the user's approved ongoing tracking of their assistant's work.", inputSchema: { type: "object", properties: { id: { type: "string", format: "uuid" }, ...properties }, required: ["id", "title", "description", "status", "labels", "dueDate"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
   { name: "update_task", description: "Edit, move, archive or restore one existing task for the signed-in user. Read its current revision first; a stale revision fails without overwriting newer edits. Archive is recoverable. Does not modify a calendar. Use within user-requested updates or approved ongoing tracking of their assistant's verified work progress. For appointments, update completion only when the user reports the outcome; never infer completion from elapsed time.", inputSchema: { type: "object", properties: { id: { type: "string", format: "uuid" }, revision: { type: "integer", minimum: 1 }, ...properties, archived: { type: "boolean" } }, required: ["id", "revision"], additionalProperties: false }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false } },
@@ -30,7 +35,8 @@ export async function POST(request: Request) {
   const requestedProtocol = typeof body.params?.protocolVersion === "string" ? body.params.protocolVersion : "";
   const result = (value: unknown) => Response.json({ jsonrpc: "2.0", id, result: value }, { headers });
   if (body.method.startsWith("notifications/") && body.id === undefined) return new Response(null, { status: 202, headers });
-  if (body.method === "initialize") return result({ protocolVersion: ["2024-11-05", "2025-03-26", "2025-06-18"].includes(requestedProtocol) ? requestedProtocol : "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "life-board", version: "1.1.0" } });
+  if (body.method === "initialize") return result({ protocolVersion: ["2024-11-05", "2025-03-26", "2025-06-18", "2026-07-28"].includes(requestedProtocol) ? requestedProtocol : "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "life-board", version: "1.1.0" } });
+  if (body.method === "server/discover") return result({ supportedVersions: ["2026-07-28"], capabilities: { tools: {} } });
   if (body.method === "ping") return result({});
   if (body.method === "tools/list") return result({ tools: [...tools, ...calendarTools] });
   if (body.method !== "tools/call") return Response.json({ jsonrpc: "2.0", id, error: { code: -32601, message: "Method not found" } }, { headers });
@@ -39,7 +45,11 @@ export async function POST(request: Request) {
   try {
     const args = body.params?.arguments ?? {};
     let data;
-    if (body.params?.name === "list_tasks") { const v = z.object({ archived: z.boolean().optional() }).strict().parse(args); data = { tasks: await listTasks(user.userId, v.archived) }; }
+    if (body.params?.name === "list_routines") { z.object({}).strict().parse(args); data = await listRoutines(user.userId); }
+    else if (body.params?.name === "create_routine") data = { routine: await createRoutine(user.userId, args) };
+    else if (body.params?.name === "set_routine_completion") data = { routine: await changeRoutine(user.userId, args) };
+    else if (body.params?.name === "remove_routine") { await removeRoutine(user.userId, args); data = { removed: true }; }
+    else if (body.params?.name === "list_tasks") { const v = z.object({ archived: z.boolean().optional() }).strict().parse(args); data = { tasks: await listTasks(user.userId, v.archived) }; }
     else if (body.params?.name === "create_task") data = { task: await createTask(user.userId, args) };
     else if (body.params?.name === "update_task") data = { task: await updateTask(user.userId, args) };
     else if (body.params?.name === "get_calendar_context") { z.object({}).strict().parse(args); data = await getCalendarContext(user.userId); }

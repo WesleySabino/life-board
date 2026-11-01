@@ -147,3 +147,96 @@ h2 { display: flex; align-items: center; gap: .5rem; font-size: .9375rem; font-w
 .column-page .card-description { -webkit-line-clamp: 3; }
 .column-page .card-move { width: auto; min-width: 8rem; }
 @media(max-width:560px) { .column-workspace .board-toolbar { flex-wrap: wrap; } }
+
+.routine-panel { background: var(--card); border: 1px solid var(--border); border-radius: .8rem; padding: 1.25rem 1.5rem; margin-bottom: 1.4rem; }
+.routine-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.routine-heading-copy { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; min-width: 0; }
+.routine-heading h2 { font-size: 1.2rem; letter-spacing: -.02em; }
+.routine-heading p { color: var(--muted-foreground); font-size: .875rem; margin: 0; }
+.routine-actions { display: flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+.routine-actions button { min-width: 2.75rem; min-height: 2.75rem; }
+.routine-add-trigger { padding-inline: .85rem; }
+.routine-content { display: grid; grid-template-columns: minmax(0, 3fr) minmax(14rem, 1fr); gap: 1.75rem; align-items: start; }
+.routine-main { min-width: 0; }
+.routine-progress-row { display: flex; align-items: center; gap: .85rem; margin-bottom: 1rem; font-size: .875rem; }
+.routine-progress-count { font-weight: 600; white-space: nowrap; }
+.routine-progress { height: .5rem; flex: 1; min-width: 1rem; overflow: hidden; background: var(--muted); border-radius: 1rem; }
+.routine-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .2s ease; }
+.routine-progress-percent { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.routine-list { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 0; padding: 0; }
+.routine-tile { min-width: 0; border: 1px solid var(--border); border-radius: .75rem; overflow: hidden; background: color-mix(in srgb, var(--background) 25%, var(--card)); transition: border-color .15s, background .15s; }
+.routine-tile:hover { border-color: color-mix(in srgb, var(--primary) 60%, var(--border)); background: color-mix(in srgb, var(--secondary) 35%, var(--card)); }
+.routine-tile:has(input:focus-visible) { outline: 3px solid var(--ring); outline-offset: 3px; }
+.routine-tile.is-complete { border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); background: color-mix(in srgb, var(--secondary) 50%, var(--card)); }
+.routine-tile label { position: relative; display: flex; align-items: center; gap: .85rem; min-height: 5.1rem; padding: 1rem; cursor: pointer; }
+.routine-tile label input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.routine-tile label input:disabled { cursor: wait; }
+.routine-tile:has(input:disabled) { opacity: .65; }
+.routine-checkbox { display: grid; place-items: center; flex: none; width: 1.5rem; height: 1.5rem; border: 2px solid var(--muted-foreground); border-radius: .3rem; color: var(--primary-foreground); }
+.routine-tile input:checked + .routine-checkbox { background: var(--primary); border-color: var(--primary); }
+.routine-title { font-size: .9375rem; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
+.routine-done { text-decoration: line-through; color: var(--muted-foreground); }
+.routine-tile-actions { border-top: 1px solid var(--border); padding: .25rem .5rem; }
+.routine-remove { display: flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; min-height: 2.75rem; border: 0; border-radius: .4rem; background: none; color: var(--muted-foreground); font-size: .8125rem; }
+.routine-remove:hover { background: var(--muted); color: var(--destructive); }
+.routine-manage-note, .routine-loading, .routine-empty { color: var(--muted-foreground); font-size: .875rem; margin: 0 0 1rem; }
+.routine-empty { padding: 1rem; border: 1px dashed var(--border); border-radius: .75rem; }
+.routine-add { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.routine-add input { min-width: 8rem; flex: 1; border: 1px solid var(--input); border-radius: .5rem; padding: .6rem .75rem; background: var(--background); color: var(--foreground); }
+.routine-add input::placeholder { color: var(--muted-foreground); }
+.routine-add button { min-height: 2.75rem; }
+.routine-error { color: var(--destructive); font-size: .875rem; margin: 0 0 1rem; }
+.routine-error button { min-height: 2.75rem; text-decoration: underline; }
+.routine-confirm { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .25rem .5rem; font-size: .8125rem; }
+.routine-confirm button { min-height: 2.75rem; padding: .4rem .25rem; color: var(--primary); text-decoration: underline; }
+.routine-chart { min-width: 0; margin: 0; padding-left: 1.75rem; border-left: 1px solid var(--border); }
+.routine-chart figcaption { display: flex; flex-direction: column; gap: .15rem; font-size: .9375rem; }
+.routine-chart figcaption span, .routine-chart-note { color: var(--muted-foreground); font-size: .8125rem; }
+.routine-chart-plot { display: flex; gap: .45rem; margin-top: .9rem; }
+.routine-y-axis { height: 5rem; display: flex; flex-direction: column; justify-content: space-between; color: var(--muted-foreground); font-size: .7rem; }
+.routine-plot-main { flex: 1; min-width: 0; }
+.routine-bars { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: .15rem; min-width: 0; border-bottom: 1px solid var(--border); }
+.routine-bar-track { height: 5rem; display: flex; align-items: end; }
+.routine-bar { display: block; width: 100%; background: var(--primary); border-radius: .15rem .15rem 0 0; }
+.routine-axis-dates { display: flex; justify-content: space-between; gap: .4rem; color: var(--muted-foreground); font-size: .7rem; padding-top: .3rem; }
+.routine-chart-note { margin: .5rem 0 0; }
+.routine-chart-details { font-size: .8125rem; margin-top: .25rem; }
+.routine-chart-details summary { display: list-item; width: fit-content; min-height: 2.75rem; align-content: center; cursor: pointer; color: var(--primary); }
+.routine-chart-details table { width: 100%; border-collapse: collapse; text-align: left; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.routine-chart-details th, .routine-chart-details td { padding: .35rem .25rem; border-bottom: 1px solid var(--border); }
+.routine-chart-details th:first-child { white-space: nowrap; }
+.routine-chart-details caption { text-align: left; color: var(--muted-foreground); padding: .4rem 0; }
+@media (max-width: 1199px) {
+  .routine-content { grid-template-columns: minmax(0, 1fr) minmax(13rem, .55fr); gap: 1.25rem; }
+  .routine-chart { padding-left: 1.25rem; }
+  .routine-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .routine-panel { padding: 1rem; }
+  .routine-content { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .routine-chart { padding: 1rem 0 0; border-left: 0; border-top: 1px solid var(--border); }
+  .routine-chart figcaption { flex-direction: row; align-items: baseline; flex-wrap: wrap; gap: .25rem .75rem; }
+  .routine-bar-track, .routine-y-axis { height: 3rem; }
+  .routine-chart-plot { margin-top: .65rem; }
+  .routine-chart-note { display: inline-block; margin-right: 1rem; }
+  .routine-chart-details { display: inline; }
+  .routine-chart-details summary { display: inline list-item; }
+}
+@media (max-width: 560px) {
+  .routine-heading { align-items: start; flex-wrap: wrap; gap: .75rem; }
+  .routine-heading-copy { width: 100%; justify-content: space-between; gap: .25rem .5rem; }
+  .routine-heading h2 { font-size: 1.1rem; }
+  .routine-heading p { font-size: .75rem; }
+  .routine-actions { width: 100%; }
+  .routine-add-trigger { margin-right: auto; }
+  .routine-list { gap: .6rem; }
+  .routine-tile label { min-height: 4.75rem; padding: .75rem; gap: .6rem; }
+  .routine-checkbox { width: 1.3rem; height: 1.3rem; }
+  .routine-title { font-size: .875rem; }
+  .routine-progress-row { gap: .6rem; font-size: .8125rem; }
+  .routine-add input { flex-basis: 100%; }
+}
+@media (max-width: 359px) {
+  .routine-list { grid-template-columns: minmax(0, 1fr); }
+  .routine-tile label { min-height: 3.5rem; }
+}

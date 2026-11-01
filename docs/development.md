@@ -12,7 +12,7 @@ npm run lint
 npm run build
 ```
 
-`npm test` covers input validation for tasks, snapshot windows and event links, plus column-preview counts, ordering, filtering, mutation isolation and navigation URLs. It does not replace integration tests of a deployed host's authentication or D1 behavior. `npm run build` emits a Cloudflare-compatible Worker and assets in `dist/`. The project includes portable development helpers; managed Sites environments can select their own ignored checkout-local execution profile.
+`npm test` covers input validation for tasks, snapshot windows and event links, plus column-preview counts, ordering, filtering, mutation isolation and navigation URLs. It also covers routine input validation, Paraguay day boundaries, historical date ranges and refresh behavior after midnight or resume. It does not replace integration tests of a deployed host's authentication or D1 behavior. `npm run build` emits a Cloudflare-compatible Worker and assets in `dist/`. The project includes portable development helpers; managed Sites environments can select their own ignored checkout-local execution profile.
 
 `.github/workflows/ci.yml` runs independent lint, typecheck, test and build jobs on pushes, pull requests and manual dispatches, using Node.js 24 and the npm lockfile. All four jobs report even when one fails. The workflow has read-only repository access and needs no application secrets. It validates the portable build; it does not deploy or change branch protection. Existing ESLint warnings remain visible without failing the lint job.
 
@@ -23,6 +23,8 @@ Build first to emit `dist/server/wrangler.json`. Apply each checked-in migration
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_tiny_roulette.sql
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_powerful_sphinx.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_glamorous_kylun.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0003_perfect_night_thrasher.sql
 npm run dev
 ```
 
@@ -40,9 +42,10 @@ Sites supplies the authentication boundary and trusted Site-scoped identity head
 
 ## MCP and calendar checks
 
-The stateless `POST /mcp` route supports initialization, discovery and these seven tools:
+The stateless `POST /mcp` route supports initialization, discovery and these eleven tools:
 
 - `list_tasks`, `create_task`, `update_task`
+- `list_routines`, `create_routine`, `set_routine_completion`, `remove_routine`
 - `get_calendar_context`, `replace_calendar_snapshot`, `mark_calendar_snapshot_stale`, `save_task_calendar_link`
 
 Discovery contains no private records. Data-bearing calls require authenticated user context. Create retries reuse the same UUID; updates read and send the current revision. On a conflict, fetch the latest record and review it before retrying. Do not silently replace another edit.
@@ -52,3 +55,9 @@ After publication, install/connect the Site's own plugin, inspect its actual cat
 For snapshots, fetch all provider result pages successfully before importing a bounded window with `complete: true`. Preserve the configured source and task-destination calendar IDs. On an incomplete/failed refresh, keep the last good snapshot and mark it stale. No automatic provider refresh or cron job is included.
 
 For a specifically requested task deadline event, read its current link, create/update the one private non-blocking all-day entry via the separately connected calendar tool, verify provider state, then save its immutable calendar/event identity and exported task revision. Use no attendees, notes, extra reminders or recurrence. If the provider write is uncertain, inspect its state instead of blindly retrying. Do not delete calendar entries when tasks are archived or completed, or infer personal appointment completion from elapsed time.
+
+## Daily routine integration checks
+
+After applying all four migrations to a fresh local database, start the development server on `http://127.0.0.1:5173` and run `node tests/routines-integration.mjs` in another terminal. This script uses only the built-in loopback test identity. It checks an initially empty routine, anonymous access rejection, same-origin writes, create retries, completion and undo, stale dates/revisions, removal, MCP discovery and routine operations, and preservation of recorded history after removal. Run it only against an isolated local test database; it creates and removes fictional records and leaves one recorded completion to verify history retention.
+
+For UI checks, use fictional routines and cover whole-card checkbox activation, keyboard focus, add/cancel/Escape, management/removal confirmation, the 30-day counts table and narrow viewports. API failures must leave the add draft available for review. Check completion only for activity the user reports; routine removal is permanent and needs explicit user intent.

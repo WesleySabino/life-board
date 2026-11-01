@@ -37,16 +37,25 @@ For personal tasks and appointments, completion should come from what you report
 - Dedicated full-column pages with Back to board, editing, move and archive controls
 - Drag-and-drop moves plus keyboard/touch-friendly controls
 - Recoverable archive and restore
+- A daily routine checklist with compact clickable cards, today's progress and a small 30-day history chart
 - Durable Cloudflare D1 storage, with user-scoped queries
 - Revision checks that reject conflicting edits instead of overwriting newer work; the UI keeps your draft
 - Refreshes of stored board data every 30 seconds while the page is visible, plus focus/reconnection refreshes
-- A stateless MCP endpoint for conversational task and calendar-context operations
+- A stateless MCP endpoint for conversational task, daily-routine and calendar-context operations
 - Browser WebMCP tools when the browser supports them
 - A saved calendar view and per-task links to verified Google Calendar entries
 
 There is no embedded ChatGPT conversation panel in this version. Use your Codex/ChatGPT conversation alongside the board. Life Board does not contain an AI model, run autonomous background jobs, or give an assistant new permissions.
 
 Done is ordered by most recent update, clearly labeled **Recently updated**. An update can be an edit or a move; it is not a completion timestamp. The other columns keep their existing board order. Archive state and the selected mobile column are carried through navigation. See the [compact-column validation notes](docs/compact-column-validation.md) for verification scope.
+
+## Daily routine
+
+Add recurring daily tasks with **Add routine**, then check or uncheck their cards for today. The panel uses three columns on desktop, two on mobile and one on very narrow screens. The overflow control opens **Manage routines**, where removal requires confirmation. The add form keeps its draft after an error, supports Escape to close and restores keyboard focus to its trigger.
+
+Routine definitions persist in your private D1 store. Completion resets by calendar date in `America/Asuncion`, independently of the device's timezone. The panel refreshes on daily rollover, while visible, and on focus or reconnection. Revision and date checks reject stale writes.
+
+The history chart and **View counts** table show aggregate recorded completions for the last 30 days. Unchecking a routine removes its completion for that day; removing a routine keeps its past history. Zero days mean no recorded completions, not inferred activity. The four routine MCP tools let your connected assistant list, add, complete and remove routines within your instructions; personal completion must come from what you report.
 
 ## Calendar behavior
 
@@ -69,7 +78,7 @@ Requires **Node.js ≥22.13.0**, npm, and access to the package registry. The pr
 ```sh
 npm ci
 npm run build
-# Apply the two checked-in SQL migrations to your local DB; see docs/development.md.
+# Apply the four checked-in SQL migrations to your local DB; see docs/development.md.
 npm run dev
 ```
 

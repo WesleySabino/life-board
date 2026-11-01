@@ -31,3 +31,19 @@ export const taskCalendarLinks = sqliteTable("task_calendar_links", {
   payload: text("payload").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, (table) => [primaryKey({ columns: [table.ownerId, table.taskId] })]);
+
+export const routines = sqliteTable("routines", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  title: text("title").notNull(),
+  completedDate: text("completed_date"),
+  revision: integer("revision").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [index("idx_routines_owner").on(table.ownerId)]);
+
+export const routineCompletions = sqliteTable("routine_completions", {
+  ownerId: text("owner_id").notNull(),
+  routineId: text("routine_id").notNull(),
+  date: text("date").notNull(),
+}, (table) => [primaryKey({ columns: [table.ownerId, table.routineId, table.date] }), index("idx_routine_completions_owner_date").on(table.ownerId, table.date)]);
